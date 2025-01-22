@@ -6,7 +6,7 @@
 #include <zephyr/ztest.h>
 #include <zephyr/ztest_error_hook.h>
 
-#define STACK_SIZE (512 + CONFIG_TEST_EXTRA_STACK_SIZE)
+#define STACK_SIZE           (512 + CONFIG_TEST_EXTRA_STACK_SIZE)
 #define THREAD_TEST_PRIORITY 5
 
 /* use to pass case type to threads */
@@ -69,10 +69,8 @@ static void tThread_entry_negative(void *p1, void *p2, void *p3)
 			perm = perm | K_USER;
 		}
 
-		k_thread_create((struct k_thread *)NULL, test_stack, STACK_SIZE,
-			test_thread, NULL, NULL, NULL,
-			K_PRIO_PREEMPT(THREAD_TEST_PRIORITY),
-			perm, K_NO_WAIT);
+		k_thread_create((struct k_thread *)NULL, test_stack, STACK_SIZE, test_thread, NULL,
+				NULL, NULL, K_PRIO_PREEMPT(THREAD_TEST_PRIORITY), perm, K_NO_WAIT);
 		break;
 	case THREAD_CREATE_STACK_NULL:
 		ztest_set_fault_valid(true);
@@ -80,20 +78,16 @@ static void tThread_entry_negative(void *p1, void *p2, void *p3)
 			perm = perm | K_USER;
 		}
 
-		k_thread_create(&test_tdata, NULL, STACK_SIZE,
-			test_thread, NULL, NULL, NULL,
-			K_PRIO_PREEMPT(THREAD_TEST_PRIORITY),
-			perm, K_NO_WAIT);
+		k_thread_create(&test_tdata, NULL, STACK_SIZE, test_thread, NULL, NULL, NULL,
+				K_PRIO_PREEMPT(THREAD_TEST_PRIORITY), perm, K_NO_WAIT);
 		break;
 	case THREAD_CTEATE_STACK_SIZE_OVERFLOW:
 		ztest_set_fault_valid(true);
 		if (k_is_user_context()) {
 			perm = perm | K_USER;
 		}
-		k_thread_create(&test_tdata, test_stack, -1,
-			test_thread, NULL, NULL, NULL,
-			K_PRIO_PREEMPT(THREAD_TEST_PRIORITY),
-			perm, K_NO_WAIT);
+		k_thread_create(&test_tdata, test_stack, -1, test_thread, NULL, NULL, NULL,
+				K_PRIO_PREEMPT(THREAD_TEST_PRIORITY), perm, K_NO_WAIT);
 		break;
 	default:
 		TC_PRINT("should not be here!\n");
@@ -116,11 +110,9 @@ static void create_negative_test_thread(int choice)
 
 	case_type = choice;
 
-	k_tid_t tid = k_thread_create(&tdata, tstack, STACK_SIZE,
-			tThread_entry_negative,
-			(void *)&case_type, NULL, NULL,
-			K_PRIO_PREEMPT(THREAD_TEST_PRIORITY),
-			perm, K_NO_WAIT);
+	k_tid_t tid = k_thread_create(&tdata, tstack, STACK_SIZE, tThread_entry_negative,
+				      (void *)&case_type, NULL, NULL,
+				      K_PRIO_PREEMPT(THREAD_TEST_PRIORITY), perm, K_NO_WAIT);
 
 	(void)k_thread_join(tid, K_FOREVER);
 }
@@ -173,6 +165,30 @@ void *thread_grant_setup(void)
 	k_thread_access_grant(k_current_get(), &tdata, &tstack, &test_tdata, &test_stack);
 
 	return NULL;
+}
+
+/*test case abort essential thread*/
+static void thread_abort_essential_thread(void *p1, void *p2, void *p3)
+{
+	k_tid_t thread = k_current_get();
+
+	ztest_set_fault_valid(true);
+	k_thread_abort(thread);
+
+	/* Should never reach this. */
+	ztest_test_fail();
+}
+
+ZTEST_USER(thread_error_case, test_abort_essential_thread)
+{
+	/* Create an essential thread. */
+	k_tid_t tid;
+	tid = k_thread_create(&tdata, tstack, STACK_SIZE, thread_abort_essential_thread, NULL, NULL,
+			      NULL, 0, K_ESSENTIAL, K_NO_WAIT);
+	k_thread_join(tid, K_FOREVER);
+
+	/* Should never reach this. */
+	ztest_test_fail();
 }
 
 ZTEST_SUITE(thread_error_case, NULL, thread_grant_setup, NULL, NULL, NULL);

@@ -1327,14 +1327,8 @@ static ALWAYS_INLINE void halt_thread(struct k_thread *thread, uint8_t new_state
 
 void z_thread_abort(struct k_thread *thread)
 {
+	bool essential = z_is_thread_essential(thread);
 	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
-
-	if (z_is_thread_essential(thread)) {
-		k_spin_unlock(&_sched_spinlock, key);
-		__ASSERT(false, "aborting essential thread %p", thread);
-		k_panic();
-		return;
-	}
 
 	if ((thread->base.thread_state & _THREAD_DEAD) != 0U) {
 		k_spin_unlock(&_sched_spinlock, key);
@@ -1342,6 +1336,11 @@ void z_thread_abort(struct k_thread *thread)
 	}
 
 	z_thread_halt(thread, key, true);
+
+	if (essential) {
+		__ASSERT(!essential, "aborted essential thread %p", thread);
+		k_panic();
+	}
 }
 
 #if !defined(CONFIG_ARCH_HAS_THREAD_ABORT)
