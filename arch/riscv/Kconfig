@@ -432,6 +432,15 @@ config PMP_STACK_GUARD_MIN_SIZE
 	  wiggle room to accommodate the eventual overflow exception
 	  stack usage.
 
+config CUSTOM_PMP_ENTRY
+	bool "Use PMP for custom protection region"
+	depends on RISCV_PMP && MEM_ATTR
+	help
+	  Enable custom Physical Memory Protection (PMP) entries to protect
+	  user-defined memory regions. These regions are defined in the Device
+	  Tree using the "zephyr,memattr" property. This allows for hardware-
+	  specific protection of critical data or firmware rollback segments.
+
 # Implement the null pointer detection using the Physical Memory Protection
 # (PMP) Unit.
 config NULL_POINTER_EXCEPTION_DETECTION_PMP
